@@ -1,13 +1,19 @@
 # -*- coding: utf-8 -*-
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.db import models
-from user.enums import AdminPermissionEnum
-
-# Create your models here.
+from log.enums import AdminPermissionEnum
 
 
-class MyUserManager(BaseUserManager):
-    def create_user(self, username, email, permission=None, password=None):
+class Company(models.Model):
+    code = models.CharField(max_length=10, unique=True)
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class UserManager(BaseUserManager):
+    def create_user(self, username, email, password, permission=None):
         """
         Creates and saves a User with the given email, date of
         birth and password.
@@ -16,8 +22,10 @@ class MyUserManager(BaseUserManager):
             raise ValueError('Users must have an email address')
         if not username:
             raise ValueError('Users must have an username')
+        if not password:
+            raise ValueError('Users must have an password')
         if not permission:
-            permission=AdminPermissionEnum.CS
+            permission=AdminPermissionEnum.CS.name
 
         user = self.model(
             email=self.normalize_email(email),
@@ -29,7 +37,7 @@ class MyUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, username, password=None):
+    def create_superuser(self, username, email, password):
         email = 'test1@gmail.com'
         user = self.create_user(
             username=username, 
@@ -43,7 +51,6 @@ class MyUserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(
-        verbose_name='email_address',
         max_length=225,
         unique=True
     )
@@ -56,8 +63,9 @@ class User(AbstractBaseUser, PermissionsMixin):
         max_length=2,
         choices=AdminPermissionEnum.choices()
     )
+    companies = models.ManyToManyField(Company)
 
-    objects = MyUserManager()
+    objects = UserManager()
     USERNAME_FIELD = 'username'
 
     def __str__(self):
